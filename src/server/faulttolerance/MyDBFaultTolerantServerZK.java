@@ -109,14 +109,20 @@ public class MyDBFaultTolerantServerZK extends server.MyDBSingleServer implement
 					ResultSet gradeRs = session.execute("SELECT COUNT(*) as cnt FROM " + keyspace + ".grade");
 					Row gradeRow = gradeRs.one();
 					if (gradeRow != null && gradeRow.getLong("cnt") == 0) {
+						// Table is empty - reset lastApplied to 0 so we can process new requests
+						// This handles the case where the test framework cleared the table
+						// We reset regardless of pending ZK requests to ensure we can process new requests
 						List<String> pendingChildren = zk.getChildren(ZK_REQUESTS_PARENT, false);
 						if (pendingChildren != null && !pendingChildren.isEmpty()) {
 							System.out.println("[" + keyspace + "] Grade table empty but " + pendingChildren.size()
 									+ " requests in ZK, resetting lastApplied from " + lastApplied
 									+ " to 0 to reprocess from ZK");
-							this.lastApplied = 0L;
-							session.execute("UPDATE " + keyspace + ".zk_meta SET last_applied = 0 WHERE id='meta'");
+						} else {
+							System.out.println("[" + keyspace + "] Grade table empty, resetting lastApplied from "
+									+ lastApplied + " to 0 (no pending requests in ZK)");
 						}
+						this.lastApplied = 0L;
+						session.execute("UPDATE " + keyspace + ".zk_meta SET last_applied = 0 WHERE id='meta'");
 					}
 				} catch (Exception e) {
 					System.out.println(
