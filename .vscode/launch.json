@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "GraderFaultTolerance",
+      "request": "launch",
+      "mainClass": "GraderFaultTolerance",
+      "projectName": "fault-tolerant-db_44c8050b"
+    }
+  ]
+} // {
+//   "version": "0.2.0",
+//   "configurations": [
+//     {
+//       "type": "java",
+//       "name": "GraderFaultTolerance (GP mode)",
+//       "request": "launch",
+//       "mainClass": "GraderFaultTolerance",
+//       "vmArgs": "-Dgigapaxos.mode=true"
+//     }
+//   ]
+// }

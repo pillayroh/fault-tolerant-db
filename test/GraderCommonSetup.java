@@ -9,6 +9,8 @@ import edu.umass.cs.nio.interfaces.NodeConfig;
 import edu.umass.cs.nio.nioutils.NIOHeader;
 import edu.umass.cs.nio.nioutils.NodeConfigUtils;
 import edu.umass.cs.utils.RepeatRule;
+
+import org.apache.zookeeper.KeeperException;
 import org.junit.*;
 import org.junit.rules.TestName;
 import org.junit.rules.TestWatcher;
@@ -489,24 +491,38 @@ synchronized static long incrSeq() {
 }
 
 protected static void startReplicatedServersSingleJVM(boolean FT) throws IOException {
-	int i = 0;
-	for (String node : nodeConfigServer.getNodeIDs()) {
-		replicatedServers[i++] = STUDENT_TESTING_MODE ?
+    int i = 0;
+    for (String node : nodeConfigServer.getNodeIDs()) {
+        if (STUDENT_TESTING_MODE) {
 
-				(FT ? new MyDBFaultTolerantServerZK(nodeConfigServer, node,
-						DEFAULT_DB_ADDR) :
-						new MyDBReplicatedServer(nodeConfigServer, node,
-								DEFAULT_DB_ADDR))
+            if (FT) {
+                // Fault-tolerant (ZK) path
+                try {
+                    replicatedServers[i++] =
+                            new MyDBFaultTolerantServerZK(nodeConfigServer, node, DEFAULT_DB_ADDR);
+                } catch (KeeperException | InterruptedException e) {
+                    // Wrap checked exceptions so method signature stays throws IOException
+                    throw new IOException("Failed to start MyDBFaultTolerantServerZK for " + node, e);
+                }
 
-				:
+            } else {
+                // Non-fault-tolerant replicated server
+                replicatedServers[i++] =
+                        new MyDBReplicatedServer(nodeConfigServer, node, DEFAULT_DB_ADDR);
+            }
 
-				// instructor mode
-				(SingleServer) getInstance(getConstructor("server" +
-						".AVDBReplicatedServer", NodeConfig.class,
-						String.class, InetSocketAddress.class),
-						nodeConfigServer, node, DEFAULT_DB_ADDR);
-	}
+        } else {
+            // Instructor mode: use reference implementation
+            replicatedServers[i++] = (SingleServer) getInstance(
+                    getConstructor("server.AVDBReplicatedServer",
+                                   NodeConfig.class,
+                                   String.class,
+                                   InetSocketAddress.class),
+                    nodeConfigServer, node, DEFAULT_DB_ADDR);
+        }
+    }
 }
+
 
 protected static boolean LOOP_MODE=false;
 
