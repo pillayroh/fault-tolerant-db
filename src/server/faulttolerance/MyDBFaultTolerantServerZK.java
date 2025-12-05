@@ -96,115 +96,71 @@ public class MyDBFaultTolerantServerZK extends server.MyDBSingleServer implement
 			throw new IOException("Failed to create/read tables: " + e.getMessage(), e);
 		}
 
-		// try {
-		// 	this.zk = new ZooKeeper(zkConnect, zkSessionTimeoutMs, this);
-		// 	ensurePathExists(ZK_REQUESTS_PARENT);
+		try {
+			this.zk = new ZooKeeper(zkConnect, zkSessionTimeoutMs, this);
+			ensurePathExists(ZK_REQUESTS_PARENT);
 
-		// 	// Check if grade table is empty but lastApplied > 0
-		// 	// We MUST reset lastApplied to 0 to reprocess requests from ZK
-		// 	// Otherwise, servers will look for sequences > lastApplied which may not exist
-		// 	// Only do this check after ZK is connected so we can check for pending requests
-		// 	if (lastApplied > 0) {
-		// 		try {
-		// 			ResultSet gradeRs = session.execute("SELECT COUNT(*) as cnt FROM " + keyspace + ".grade");
-		// 			Row gradeRow = gradeRs.one();
-		// 			if (gradeRow != null && gradeRow.getLong("cnt") == 0) {
-		// 				// Table is empty - reset lastApplied to 0 so we can process new requests
-		// 				// This handles the case where the test framework cleared the table
-		// 				// We reset regardless of pending ZK requests to ensure we can process new requests
-		// 				List<String> pendingChildren = zk.getChildren(ZK_REQUESTS_PARENT, false);
-		// 				if (pendingChildren != null && !pendingChildren.isEmpty()) {
-		// 					System.out.println("[" + keyspace + "] Grade table empty but " + pendingChildren.size()
-		// 							+ " requests in ZK, resetting lastApplied from " + lastApplied
-		// 							+ " to 0 to reprocess from ZK");
-		// 				} else {
-		// 					System.out.println("[" + keyspace + "] Grade table empty, resetting lastApplied from "
-		// 							+ lastApplied + " to 0 (no pending requests in ZK)");
-		// 				}
-		// 				this.lastApplied = 0L;
-		// 				session.execute("UPDATE " + keyspace + ".zk_meta SET last_applied = 0 WHERE id='meta'");
-		// 			}
-		// 		} catch (Exception e) {
-		// 			System.out.println(
-		// 					"[" + keyspace + "] Could not check grade table (might not exist yet): " + e.getMessage());
-		// 		}
-		// 	}
-		// } catch (KeeperException e) {
-		// 	try {
-		// 		session.close();
-		// 	} catch (Exception ignore) {
-		// 	}
-		// 	try {
-		// 		cluster.close();
-		// 	} catch (Exception ignore) {
-		// 	}
-		// 	throw new IOException("Failed to initialize ZooKeeper: " + e.getMessage(), e);
-		// } catch (InterruptedException e) {
-		// 	Thread.currentThread().interrupt();
-		// 	try {
-		// 		session.close();
-		// 	} catch (Exception ignore) {
-		// 	}
-		// 	try {
-		// 		cluster.close();
-		// 	} catch (Exception ignore) {
-		// 	}
-		// 	throw new IOException("Failed to initialize ZooKeeper (interrupted): " + e.getMessage(), e);
-		// } catch (Exception e) {
-		// 	try {
-		// 		session.close();
-		// 	} catch (Exception ignore) {
-		// 	}
-		// 	try {
-		// 		cluster.close();
-		// 	} catch (Exception ignore) {
-		// 	}
-		// 	throw e;
-		// }
-        try {
-            this.zk = new ZooKeeper(zkConnect, zkSessionTimeoutMs, this);
-            ensurePathExists(ZK_REQUESTS_PARENT);
-        
-            // Gradescope: each autograder round should start from a clean state.
-            // Clear any old ZK requests and reset lastApplied so we don't mix rounds.
-            try {
-                List<String> children = zk.getChildren(ZK_REQUESTS_PARENT, false);
-                if (children != null && !children.isEmpty()) {
-                    System.out.println("[" + keyspace + "] Clearing " + children.size()
-                            + " existing ZK requests at startup");
-                    for (String child : children) {
-                        try {
-                            zk.delete(ZK_REQUESTS_PARENT + "/" + child, -1);
-                        } catch (Exception ignore) { }
-                    }
-                }
-            } catch (Exception e) {
-                System.out.println("[" + keyspace + "] Could not list/clear ZK requests: " + e.getMessage());
-            }
-        
-            // Also reset lastApplied for this process so we reprocess only new requests
-            this.lastApplied = 0L;
-            try {
-                session.execute("UPDATE " + keyspace + ".zk_meta SET last_applied = 0 WHERE id='meta'");
-            } catch (Exception e) {
-                System.out.println("[" + keyspace + "] Could not reset last_applied in zk_meta: " + e.getMessage());
-            }
-        
-        } catch (KeeperException e) {
-            try { session.close(); } catch (Exception ignore) {}
-            try { cluster.close(); } catch (Exception ignore) {}
-            throw new IOException("Failed to initialize ZooKeeper: " + e.getMessage(), e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            try { session.close(); } catch (Exception ignore) {}
-            try { cluster.close(); } catch (Exception ignore) {}
-            throw new IOException("Failed to initialize ZooKeeper (interrupted): " + e.getMessage(), e);
-        } catch (Exception e) {
-            try { session.close(); } catch (Exception ignore) {}
-            try { cluster.close(); } catch (Exception ignore) {}
-            throw e;
-        }
-        
+			// Check if grade table is empty but lastApplied > 0
+			// We MUST reset lastApplied to 0 to reprocess requests from ZK
+			// Otherwise, servers will look for sequences > lastApplied which may not exist
+			// Only do this check after ZK is connected so we can check for pending requests
+			if (lastApplied > 0) {
+				try {
+					ResultSet gradeRs = session.execute("SELECT COUNT(*) as cnt FROM " + keyspace + ".grade");
+					Row gradeRow = gradeRs.one();
+					if (gradeRow != null && gradeRow.getLong("cnt") == 0) {
+						// Table is empty - reset lastApplied to 0 so we can process new requests
+						// This handles the case where the test framework cleared the table
+						// We reset regardless of pending ZK requests to ensure we can process new requests
+						List<String> pendingChildren = zk.getChildren(ZK_REQUESTS_PARENT, false);
+						if (pendingChildren != null && !pendingChildren.isEmpty()) {
+							System.out.println("[" + keyspace + "] Grade table empty but " + pendingChildren.size()
+									+ " requests in ZK, resetting lastApplied from " + lastApplied
+									+ " to 0 to reprocess from ZK");
+						} else {
+							System.out.println("[" + keyspace + "] Grade table empty, resetting lastApplied from "
+									+ lastApplied + " to 0 (no pending requests in ZK)");
+						}
+						this.lastApplied = 0L;
+						session.execute("UPDATE " + keyspace + ".zk_meta SET last_applied = 0 WHERE id='meta'");
+					}
+				} catch (Exception e) {
+					System.out.println(
+							"[" + keyspace + "] Could not check grade table (might not exist yet): " + e.getMessage());
+				}
+			}
+		} catch (KeeperException e) {
+			try {
+				session.close();
+			} catch (Exception ignore) {
+			}
+			try {
+				cluster.close();
+			} catch (Exception ignore) {
+			}
+			throw new IOException("Failed to initialize ZooKeeper: " + e.getMessage(), e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			try {
+				session.close();
+			} catch (Exception ignore) {
+			}
+			try {
+				cluster.close();
+			} catch (Exception ignore) {
+			}
+			throw new IOException("Failed to initialize ZooKeeper (interrupted): " + e.getMessage(), e);
+		} catch (Exception e) {
+			try {
+				session.close();
+			} catch (Exception ignore) {
+			}
+			try {
+				cluster.close();
+			} catch (Exception ignore) {
+			}
+			throw e;
+		}
 
 		bgExecutor.scheduleWithFixedDelay(() -> {
 			try {
