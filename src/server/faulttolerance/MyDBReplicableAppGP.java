@@ -184,7 +184,6 @@ public class MyDBReplicableAppGP implements Replicable {
 				state.put(id, new ArrayList<>(events));
 			}
 
-			// Serialize state to string format: "key1:val1,val2;key2:val3,val4;..."
 			StringBuilder sb = new StringBuilder();
 			boolean first = true;
 			for (Map.Entry<Integer, List<Integer>> entry : state.entrySet()) {
@@ -203,7 +202,6 @@ public class MyDBReplicableAppGP implements Replicable {
 			return sb.toString();
 		} catch (Exception e) {
 			e.printStackTrace();
-			// Return empty string on error - Gigapaxos will replay from log
 			return "";
 		}
 	}
@@ -228,7 +226,7 @@ public class MyDBReplicableAppGP implements Replicable {
 			}
 
 			// Deserialize and restore state
-			// Format: "key1:val1,val2;key2:val3,val4;..."
+			
 			String[] entries = s1.split(";");
 			for (String entry : entries) {
 				if (entry.isEmpty())
