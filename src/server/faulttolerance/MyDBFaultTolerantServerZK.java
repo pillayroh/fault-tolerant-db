@@ -46,7 +46,7 @@ public class MyDBFaultTolerantServerZK extends server.MyDBSingleServer implement
 	public MyDBFaultTolerantServerZK(NodeConfig<String> nodeConfig,
 			String myID,
 			InetSocketAddress isaDB)
-			throws IOException, KeeperException, InterruptedException {
+			throws IOException {
 
 		super(new InetSocketAddress(
 				nodeConfig.getNodeAddress(myID),
@@ -123,6 +123,27 @@ public class MyDBFaultTolerantServerZK extends server.MyDBSingleServer implement
 							"[" + keyspace + "] Could not check grade table (might not exist yet): " + e.getMessage());
 				}
 			}
+		} catch (KeeperException e) {
+			try {
+				session.close();
+			} catch (Exception ignore) {
+			}
+			try {
+				cluster.close();
+			} catch (Exception ignore) {
+			}
+			throw new IOException("Failed to initialize ZooKeeper: " + e.getMessage(), e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			try {
+				session.close();
+			} catch (Exception ignore) {
+			}
+			try {
+				cluster.close();
+			} catch (Exception ignore) {
+			}
+			throw new IOException("Failed to initialize ZooKeeper (interrupted): " + e.getMessage(), e);
 		} catch (Exception e) {
 			try {
 				session.close();
