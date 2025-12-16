@@ -3,6 +3,7 @@ package server.faulttolerance;
 import com.datastax.driver.core.*;
 import edu.umass.cs.nio.interfaces.NodeConfig;
 import edu.umass.cs.nio.nioutils.NIOHeader;
+
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.proto.RaftProtos;
@@ -43,12 +44,12 @@ public class MyDBRAFTServer extends server.MyDBSingleServer {
     private static final long CLIENT_WAIT_MS = 30_000L;
     private static final int CHECKPOINT_INTERVAL = 100; // Checkpoint every 100 requests
 
-    private static final Cluster cluster;
+    private static Cluster cluster = null;
     private final Session session;
     private final String keyspace;
     private final RaftServer raftServer;
     private final RaftGroup raftGroup;
-    private final RaftPeerId localPeerId;
+    private RaftPeerId localPeerId;
     private final DBStateMachine stateMachine;
 
     private final ConcurrentHashMap<String, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
@@ -61,6 +62,8 @@ public class MyDBRAFTServer extends server.MyDBSingleServer {
         this.keyspace = keyspace1;
         this.stateMachine = stateMachine;
     }
+
+
     /**
      * State machine that applies commands to Cassandra after Raft consensus.
      */
@@ -310,7 +313,7 @@ public class MyDBRAFTServer extends server.MyDBSingleServer {
         }
     }
 
-    public MyDBFaultTolerantServerRaft(NodeConfig<String> nodeConfig,
+    public MyDBRAFTServer(NodeConfig<String> nodeConfig,
                                        String myID,
                                        InetSocketAddress isaDB) throws IOException {
         super(new InetSocketAddress(
@@ -363,7 +366,7 @@ public class MyDBRAFTServer extends server.MyDBSingleServer {
         Set<String> allServers = nodeConfig.getNodeIDs();
 
         for (String serverId : allServers) {
-            String host = nodeConfig.getNodeAddress(serverId);
+            String host = String.valueOf(nodeConfig.getNodeAddress(serverId));
             int basePort = nodeConfig.getNodePort(serverId);
             int raftPort = basePort + 1000; // Offset for Raft communication
 
@@ -618,8 +621,7 @@ public class MyDBRAFTServer extends server.MyDBSingleServer {
             MyDBRAFTServer server = new MyDBRAFTServer(
                     nodeConfig,
                     serverName,
-                    new InetSocketAddress("localhost", 9042),
-                    cluster);
+                    new InetSocketAddress("localhost", 9042));
             System.out.println("MyDBFaultTolerantServerRaft " + serverName + " started successfully");
         } catch (Exception e) {
             System.err.println("Failed to start MyDBFaultTolerantServerRaft: " + e.getMessage());
